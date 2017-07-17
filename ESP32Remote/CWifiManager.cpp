@@ -111,6 +111,7 @@ void CWifiManager::eventParser()
 
 	readData = client.read_adv(state);
 
+
 	if (state <= 0)
 	{ 	
 		if (state == -999)
@@ -124,6 +125,8 @@ void CWifiManager::eventParser()
 
 		return;
 	}
+
+	Serial.println(readData);
 
 	bClientConnectionNeedsUpdate = false;
 

@@ -402,11 +402,18 @@ String CFunctionParameter::getResult()
 
 
 
-CLcdMenuFunction::CLcdMenuFunction(String _menuName, eventObject _event, CBaseEventInterface * _basePointer) : CLcdMenuInterface(_menuName), CBaseEventInterface(_basePointer)
+CLcdMenuFunction::CLcdMenuFunction(String _menuName, eventObject _event, CBaseEventInterface * _basePointer, String _command) : CLcdMenuInterface(_menuName), CBaseEventInterface(_basePointer)
 {
 	iIndex = 0;
 
 	parameterResult = "";
+
+	if (_command == "")
+		command = _menuName;
+	else
+		command = _command;
+
+	Serial.println(command);
 
 	event = _event;
 }
@@ -426,7 +433,7 @@ void CLcdMenuFunction::loop()
 
 	if (parameterList.size() == 0)
 	{
-		(basePointer->*event)(menuName);
+		(basePointer->*event)(command + parameterResult);
 
 		parentMenu->setActive();
 
@@ -441,7 +448,7 @@ void CLcdMenuFunction::loop()
 
 		if (iIndex + 1 >= parameterList.size())
 		{
-			(basePointer->*event)(menuName + parameterResult);
+			(basePointer->*event)(command + parameterResult);
 
 			parameterResult = "";
 
@@ -470,6 +477,11 @@ void CLcdMenuFunction::addParameter(CFunctionParameter * _parameter)
 	_parameter->setLcdPointer(lcd);
 
 	parameterList.push_back(_parameter);
+}
+
+void CLcdMenuFunction::addParameter(String _parameter)
+{
+	parameterResult += ":" + _parameter;
 }
 
 void CLcdMenuFunction::removeParameter(CFunctionParameter * _parameter)

@@ -13,6 +13,8 @@ CMainApplication::~CMainApplication()
 
 void CMainApplication::init()
 {
+	vector<String> signalNameList;
+
 	Serial.begin(56000);;
 
 	if (!SD.begin(22))
@@ -27,9 +29,9 @@ void CMainApplication::init()
 		SD.mkdir("/root");
 
 
-	//CWifiManager::init();
+	getIRSignalNameList(&signalNameList);
 
-	lcdManager.init();
+	lcdManager.init(&signalNameList);
 	wifiManager.init();
 
 	addInstance(&lcdManager);
@@ -171,7 +173,7 @@ IRStatus CMainApplication::loadIRSignal(String _name, CIRControl * _irControl)
 	return IR_OK;
 }
 
-IRStatus CMainApplication::getIRSingnalNameList(vector<String> * _signalNameList)
+IRStatus CMainApplication::getIRSignalNameList(vector<String> * _signalNameList)
 {
 	File rootDir = SD.open("/root");
 
@@ -244,7 +246,17 @@ String CMainApplication::loadIRSignalEvent(String _eventData)
 
 String CMainApplication::sendIRSignalEvent(String _eventData)
 {
-	irControl.sendSignal();
+	if (_eventData.indexOf(':') != -1)
+	{
+		for (int i = 0; i < _eventData.substring(0, _eventData.indexOf(':')).toInt(); i++)
+		{
+			irControl.sendSignal();
+
+			delay(_eventData.substring(_eventData.indexOf(':') + 1).toInt());
+		}
+	}
+	else
+		irControl.sendSignal();
 
 	PL("sendIR");
 
@@ -274,7 +286,7 @@ String CMainApplication::getIRSignalNameListEvent(String _eventData)
 
 	String signalListString = "";
 
-	getIRSingnalNameList(&signalList);
+	getIRSignalNameList(&signalList);
 
 	for (int i = 0; i < signalList.size(); i++)
 		signalListString += String(signalList[i]) + ";";

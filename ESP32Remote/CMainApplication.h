@@ -36,7 +36,7 @@ class CMainApplication : CEventManager
 		CLcdManager lcdManager;
 		CWifiManager wifiManager;
 
-		IRStatus getIRSingnalNameList(vector<String> * _signalNameList);
+		IRStatus getIRSignalNameList(vector<String> * _signalNameList);
 
 		IRStatus saveIRSignal(String _name, CIRControl * _irControl, bool _bOverwrite = false);
 		IRStatus loadIRSignal(String _name, CIRControl * _irControl);

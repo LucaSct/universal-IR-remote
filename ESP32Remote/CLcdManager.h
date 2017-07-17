@@ -16,10 +16,8 @@ class CLcdManager : public CBaseEventInterface, public CButtonManager
 		CLcdManager(CBaseEventInterface * _basePointer);
 		~CLcdManager();
 
-		void init();
+		void init(std::vector<String> * _signalNameList);
 		void loop() override;
-
-		
 
 	private:
 		LiquidCrystal lcd;

@@ -116,12 +116,13 @@ class CFunctionParameter : public CLcdMenuInterface
 class CLcdMenuFunction : public CLcdMenuInterface, public CBaseEventInterface
 {
 	public:
-		CLcdMenuFunction(String _menuName, eventObject _event, CBaseEventInterface * _basePointer);
+		CLcdMenuFunction(String _menuName, eventObject _event, CBaseEventInterface * _basePointer, String _command = "");
 		~CLcdMenuFunction();
 
 		void loop() override;
 		void processButtonEvent(Buttons _button, CButtonManager::ButtonActions _buttonAction) override;
 		void addParameter(CFunctionParameter * _parameter);
+		void addParameter(String _parameter);
 		void removeParameter(CFunctionParameter * _parameter);
 
 		bool hasContent() override;
@@ -129,7 +130,8 @@ class CLcdMenuFunction : public CLcdMenuInterface, public CBaseEventInterface
 	private:
 		int iIndex;
 		
-		String parameterResult;
+		String parameterResult,
+			   command;
 
 		eventObject event;
 

@@ -12,7 +12,7 @@ CLcdManager::~CLcdManager()
 {
 }
 
-void CLcdManager::init()
+void CLcdManager::init(std::vector<String> * _signalNameList)
 {
 	CButtonManager::init(ADC1_CHANNEL_7);
 
@@ -28,25 +28,38 @@ void CLcdManager::init()
 	addButtonWatch(new SButtonEventObject(3, 2575, 100, 60, 400, 70, static_cast<buttonEvent> (&CLcdManager::okButtonEventHandler)));
 	addButtonWatch(new SButtonEventObject(4, 3175, 100, 60, 400, 70, static_cast<buttonEvent> (&CLcdManager::leftButtonEventHandler)));*/
 
+	CLcdMenu * loadIRSignalMenu = new CLcdMenu("loadIRSignal", &lcd);
+
+	for (String signalName : *_signalNameList)
+	{
+		CLcdMenuFunction * tempFunc = new CLcdMenuFunction(signalName, static_cast<eventObject> (&CLcdManager::lcdFunctionEvent), this, "loadIRSignal");
+
+		tempFunc->addParameter(signalName);
+
+		loadIRSignalMenu->addElement(tempFunc);
+	}
+
 	CLcdMenuFunction * sendIRSignalFunc = new CLcdMenuFunction("sendIRSignal", static_cast<eventObject> (&CLcdManager::lcdFunctionEvent), this);
 	CLcdMenuFunction * recvIRSignalFunc = new CLcdMenuFunction("recvIRSignal", static_cast<eventObject> (&CLcdManager::lcdFunctionEvent), this);
-	CLcdMenuFunction * loadIRSignalFunc = new CLcdMenuFunction("loadIRSignal", static_cast<eventObject> (&CLcdManager::lcdFunctionEvent), this);
 	CLcdMenuFunction * saveIRSignalFunc = new CLcdMenuFunction("saveIRSignal", static_cast<eventObject> (&CLcdManager::lcdFunctionEvent), this);
 	CLcdMenuFunction * getBattChargeFunc = new CLcdMenuFunction("getBattCharge", static_cast<eventObject> (&CLcdManager::lcdFunctionEvent), this);
 	CLcdMenuFunction * removeIRSignalFunc = new CLcdMenuFunction("removeIRSignal", static_cast<eventObject> (&CLcdManager::lcdFunctionEvent), this);
 
 	lcdMainMenu.addElement(sendIRSignalFunc);
+	lcdMainMenu.addElement(loadIRSignalMenu);
 	lcdMainMenu.addElement(recvIRSignalFunc);
-	lcdMainMenu.addElement(loadIRSignalFunc);
 	lcdMainMenu.addElement(saveIRSignalFunc);
 	lcdMainMenu.addElement(getBattChargeFunc);
 	lcdMainMenu.addElement(removeIRSignalFunc);
 
 	recvIRSignalFunc->addParameter(new CFunctionParameter("set timeout (ms)", CFunctionParameter::PARAMETER_GET_NUMBER));
+	sendIRSignalFunc->addParameter(new CFunctionParameter("repeat", CFunctionParameter::PARAMETER_GET_NUMBER));
+	sendIRSignalFunc->addParameter(new CFunctionParameter("delay (ms)", CFunctionParameter::PARAMETER_GET_NUMBER));
 
-	loadIRSignalFunc->addParameter(new CFunctionParameter("signal name", CFunctionParameter::PARAMETER_GET_STRING));
 	saveIRSignalFunc->addParameter(new CFunctionParameter("signal name", CFunctionParameter::PARAMETER_GET_STRING));
 	removeIRSignalFunc->addParameter(new CFunctionParameter("signal name", CFunctionParameter::PARAMETER_GET_STRING));
+
+	
 
 	/*CLcdMenuFunction test(this);
 
