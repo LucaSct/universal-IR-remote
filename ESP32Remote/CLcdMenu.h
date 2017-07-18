@@ -30,7 +30,9 @@ class CLcdMenuInterface
 
 		void setLcdPointer(LiquidCrystal * _lcd);
 		void setParentMenuPointer(CLcdMenuInterface * _parentMenu);
+		void setUpdateRequired() { bUpdateRequired = true; }
 		void setActive();
+
 		void activateMenu(CLcdMenuInterface * _menu);
 
 		static bool printCenteredString(String _string, bool _bSelected, uint8_t _row, uint8_t _endPosition, LiquidCrystal * _lcd, uint8_t _startPosition = 0);
@@ -42,8 +44,6 @@ class CLcdMenuInterface
 
 		CLcdMenuInterface	* activeMenu,
 							* parentMenu;
-
-		void setUpdateRequired() { bUpdateRequired = true; }
 
 		bool printCenteredString(String _string, bool _bSelected, uint8_t _row, uint8_t _endPosition, uint8_t _startPosition = 0);
 };
@@ -60,6 +60,8 @@ class CLcdMenu : public CLcdMenuInterface
 
 		void addElement(CLcdMenuInterface * _menu);
 		void removeElement(CLcdMenuInterface * _menu);
+
+		void clear();
 
 		bool hasContent() override;
 
@@ -108,9 +110,6 @@ class CFunctionParameter : public CLcdMenuInterface
 
 		Parameters parameter;
 
-		/*void getString();
-		void getNumber();*/
-
 };
 
 class CLcdMenuFunction : public CLcdMenuInterface, public CBaseEventInterface
@@ -124,6 +123,7 @@ class CLcdMenuFunction : public CLcdMenuInterface, public CBaseEventInterface
 		void addParameter(CFunctionParameter * _parameter);
 		void addParameter(String _parameter);
 		void removeParameter(CFunctionParameter * _parameter);
+		void clear();
 
 		bool hasContent() override;
 

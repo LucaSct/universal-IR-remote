@@ -2,7 +2,7 @@
 
 
 
-CLcdManager::CLcdManager(CBaseEventInterface * _basePointer) : CBaseEventInterface(_basePointer), lcd(32, 33, 25, 26, 27, 14), lcdMainMenu("", &lcd)
+CLcdManager::CLcdManager(CBaseEventInterface * _basePointer) : CBaseEventInterface(_basePointer), LiquidCrystal(32, 33, 25, 26, 27, 14), lcdMainMenu("", this)
 {
 	bILcdnitialized = false;
 }
@@ -12,7 +12,7 @@ CLcdManager::~CLcdManager()
 {
 }
 
-void CLcdManager::init(std::vector<String> * _signalNameList)
+void CLcdManager::init()
 {
 	CButtonManager::init(ADC1_CHANNEL_7);
 
@@ -28,22 +28,15 @@ void CLcdManager::init(std::vector<String> * _signalNameList)
 	addButtonWatch(new SButtonEventObject(3, 2575, 100, 60, 400, 70, static_cast<buttonEvent> (&CLcdManager::okButtonEventHandler)));
 	addButtonWatch(new SButtonEventObject(4, 3175, 100, 60, 400, 70, static_cast<buttonEvent> (&CLcdManager::leftButtonEventHandler)));*/
 
-	CLcdMenu * loadIRSignalMenu = new CLcdMenu("loadIRSignal", &lcd);
-
-	for (String signalName : *_signalNameList)
-	{
-		CLcdMenuFunction * tempFunc = new CLcdMenuFunction(signalName, static_cast<eventObject> (&CLcdManager::lcdFunctionEvent), this, "loadIRSignal");
-
-		tempFunc->addParameter(signalName);
-
-		loadIRSignalMenu->addElement(tempFunc);
-	}
+	loadIRSignalMenu = new CLcdMenu("loadIRSignal", this);
 
 	CLcdMenuFunction * sendIRSignalFunc = new CLcdMenuFunction("sendIRSignal", static_cast<eventObject> (&CLcdManager::lcdFunctionEvent), this);
 	CLcdMenuFunction * recvIRSignalFunc = new CLcdMenuFunction("recvIRSignal", static_cast<eventObject> (&CLcdManager::lcdFunctionEvent), this);
 	CLcdMenuFunction * saveIRSignalFunc = new CLcdMenuFunction("saveIRSignal", static_cast<eventObject> (&CLcdManager::lcdFunctionEvent), this);
 	CLcdMenuFunction * getBattChargeFunc = new CLcdMenuFunction("getBattCharge", static_cast<eventObject> (&CLcdManager::lcdFunctionEvent), this);
 	CLcdMenuFunction * removeIRSignalFunc = new CLcdMenuFunction("removeIRSignal", static_cast<eventObject> (&CLcdManager::lcdFunctionEvent), this);
+	CLcdMenuFunction * renameIRSignalFunc = new CLcdMenuFunction("renameIRSignal", static_cast<eventObject> (&CLcdManager::lcdFunctionEvent), this);
+	CLcdMenuFunction * deepSleepFunc = new CLcdMenuFunction("deepSleep", static_cast<eventObject> (&CLcdManager::lcdFunctionEvent), this);
 
 	lcdMainMenu.addElement(sendIRSignalFunc);
 	lcdMainMenu.addElement(loadIRSignalMenu);
@@ -51,19 +44,19 @@ void CLcdManager::init(std::vector<String> * _signalNameList)
 	lcdMainMenu.addElement(saveIRSignalFunc);
 	lcdMainMenu.addElement(getBattChargeFunc);
 	lcdMainMenu.addElement(removeIRSignalFunc);
+	lcdMainMenu.addElement(renameIRSignalFunc);
+	lcdMainMenu.addElement(deepSleepFunc);
 
 	recvIRSignalFunc->addParameter(new CFunctionParameter("set timeout (ms)", CFunctionParameter::PARAMETER_GET_NUMBER));
 	sendIRSignalFunc->addParameter(new CFunctionParameter("repeat", CFunctionParameter::PARAMETER_GET_NUMBER));
 	sendIRSignalFunc->addParameter(new CFunctionParameter("delay (ms)", CFunctionParameter::PARAMETER_GET_NUMBER));
+	deepSleepFunc->addParameter(new CFunctionParameter("sleep time (s)", CFunctionParameter::PARAMETER_GET_NUMBER));
+	deepSleepFunc->addParameter("true");
 
 	saveIRSignalFunc->addParameter(new CFunctionParameter("signal name", CFunctionParameter::PARAMETER_GET_STRING));
 	removeIRSignalFunc->addParameter(new CFunctionParameter("signal name", CFunctionParameter::PARAMETER_GET_STRING));
-
-	
-
-	/*CLcdMenuFunction test(this);
-
-	test.registerEvent("blabla", static_cast<eventObject> (&CLcdManager::blabla));*/
+	renameIRSignalFunc->addParameter(new CFunctionParameter("from name", CFunctionParameter::PARAMETER_GET_STRING));
+	renameIRSignalFunc->addParameter(new CFunctionParameter("to name", CFunctionParameter::PARAMETER_GET_STRING));
 
 	pinMode(LCD_INTERFACE_ACTIVATE_PIN, INPUT);
 }
@@ -78,19 +71,19 @@ void CLcdManager::loop()
 
 			Serial.println("lcd");
 
-			lcd.begin(16, 2);
+			begin(16, 2);
 
-			lcd.noCursor();
-			lcd.noBlink();
+			noCursor();
+			noBlink();
 
-			lcd.print("Hallo");
+			print("Hallo");
 
 			bILcdnitialized = true;
 		}
 
-		/*lcd.setCursor(0, 1);
+		/*setCursor(0, 1);
 
-		lcd.print(adc1_get_voltage(ADC1_CHANNEL_7));
+		print(adc1_get_voltage(ADC1_CHANNEL_7));
 
 		delay(100);*/
 
@@ -102,15 +95,27 @@ void CLcdManager::loop()
 		bILcdnitialized = false;
 }
 
+void CLcdManager::updateLoadMenu(std::vector<String>* _signalNameList)
+{
+	loadIRSignalMenu->clear();
+
+	for (String signalName : *_signalNameList)
+	{
+		CLcdMenuFunction * tempFunc = new CLcdMenuFunction(signalName, static_cast<eventObject> (&CLcdManager::lcdFunctionEvent), this, "loadIRSignal");
+
+		tempFunc->addParameter(signalName);
+
+		loadIRSignalMenu->addElement(tempFunc);
+	}
+
+	loadIRSignalMenu->setUpdateRequired();
+}
+
 String CLcdManager::lcdFunctionEvent(String _eventData)
 {
-	lcd.clear();
+	clear();
 
-	//Serial.println(_eventData);
-
-	//lcd.print(_eventData);
-
-	CLcdMenuInterface::printCenteredString(raiseEvent(_eventData.substring(0, _eventData.indexOf(":")), _eventData.substring(_eventData.indexOf(":") + 1)), false, 0, 15, &lcd);
+	CLcdMenuInterface::printCenteredString(raiseEvent(_eventData.substring(0, _eventData.indexOf(":")), _eventData.substring(_eventData.indexOf(":") + 1)), false, 0, 15, this);
 
 	delay(500);
 
@@ -119,114 +124,28 @@ String CLcdManager::lcdFunctionEvent(String _eventData)
 
 void CLcdManager::upButtonEventHandler(ButtonActions _buttonAction)
 {
-	//Serial.println("up");
-
 	lcdMainMenu.processButtonEvent(CLcdMenuInterface::BUTTON_UP, _buttonAction);
-
-
-	/*lcd.clear();
-
-	if (_buttonAction == BUTTON_CLICK_EVENT)
-	{
-		lcd.print(raiseEvent("sendIRSignal", ""));
-
-		delay(500);
-
-		lcd.clear();
-	}*/
-
-	/*switch (_buttonAction)
-	{
-		case BUTTON_DOWN_EVENT:
-			lcd.print("up: down event");
-			break;
-		case BUTTON_UP_EVENT:
-			lcd.print("up: up event");
-			break;
-		case BUTTON_CLICK_EVENT:
-			lcd.print("up: click event");
-	}*/
 }
 
 void CLcdManager::downButtonEventHandler(ButtonActions _buttonAction)
 {
-	//Serial.println("down");
-
 	lcdMainMenu.processButtonEvent(CLcdMenuInterface::BUTTON_DOWN, _buttonAction);
-
-	/*lcd.clear();
-
-	switch (_buttonAction)
-	{
-		case BUTTON_DOWN_EVENT:
-			lcd.print("down: down event");
-			break;
-		case BUTTON_UP_EVENT:
-			lcd.print("down: up event");
-			break;
-		default:
-			lcd.print("down: click event");
-	}*/
 }
 
 void CLcdManager::rightButtonEventHandler(ButtonActions _buttonAction)
 {
 	lcdMainMenu.processButtonEvent(CLcdMenuInterface::BUTTON_RIGHT, _buttonAction);
-
-	/*lcd.clear();
-
-	switch (_buttonAction)
-	{
-		case BUTTON_DOWN_EVENT:
-			lcd.print("right: down event");
-			break;
-		case BUTTON_UP_EVENT:
-			lcd.print("right: up event");
-			break;
-		default:
-			lcd.print("right: click event");
-	}*/
 }
 
 void CLcdManager::okButtonEventHandler(ButtonActions _buttonAction)
 {
 	lcdMainMenu.processButtonEvent(CLcdMenuInterface::BUTTON_OK, _buttonAction);
-
-	/*lcd.clear();
-
-	switch (_buttonAction)
-	{
-		case BUTTON_DOWN_EVENT:
-			lcd.print("ok: down event");
-			break;
-		case BUTTON_UP_EVENT:
-			lcd.print("ok up event");
-			break;
-		default:
-			lcd.print("ok: click event");
-	}*/
 }
 
 void CLcdManager::leftButtonEventHandler(ButtonActions _buttonAction)
 {
 	
 	lcdMainMenu.processButtonEvent(CLcdMenuInterface::BUTTON_LEFT, _buttonAction);
-
-	/*lcd.clear();
-
-	switch (_buttonAction)
-	{
-		case BUTTON_DOWN_EVENT:
-			lcd.print("left: down event");
-			break;
-		case BUTTON_UP_EVENT:
-			lcd.print("left: up event");
-			break;
-		default:
-			lcd.print("left: click event");
-	}*/
 }
 
-//String CLcdManager::blabla(String _eventData)
-//{
-//}
+

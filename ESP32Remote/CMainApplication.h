@@ -53,5 +53,12 @@ class CMainApplication : CEventManager
 		String getIRSignalNameListEvent(String _eventData);
 
 		String removeIRSignalEvent(String _eventData);
+		String renameIRSignalEvent(String _eventData);
+
+		String deepSleep(uint64_t _time, bool _bSeconds);
+
+		String deepSleepEvent(String _eventData);
+
+		void updateLoadMenu();
 };
 

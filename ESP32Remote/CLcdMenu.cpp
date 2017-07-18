@@ -159,6 +159,9 @@ void CLcdMenu::processButtonEvent(Buttons _button, CButtonManager::ButtonActions
 			break;
 
 		case BUTTON_OK:
+			if (menuList.size() == 0)
+				return;
+
 			if (btopSelected && menuList[iIndex]->hasContent())
 				activateMenu(menuList[iIndex]);
 			else if (menuList[iIndex + 1]->hasContent())
@@ -194,6 +197,20 @@ void CLcdMenu::removeElement(CLcdMenuInterface* _menu)
 
 			break;
 		}
+	}
+}
+
+void CLcdMenu::clear()
+{
+	iIndex = 0;
+
+	btopSelected = false;
+
+	while (menuList.size() != 0)
+	{
+		delete menuList[0];
+
+		menuList.erase(menuList.begin());
 	}
 }
 
@@ -413,8 +430,6 @@ CLcdMenuFunction::CLcdMenuFunction(String _menuName, eventObject _event, CBaseEv
 	else
 		command = _command;
 
-	Serial.println(command);
-
 	event = _event;
 }
 
@@ -494,6 +509,16 @@ void CLcdMenuFunction::removeParameter(CFunctionParameter * _parameter)
 
 			break;
 		}
+	}
+}
+
+void CLcdMenuFunction::clear()
+{
+	while (parameterList.size() != 0)
+	{
+		delete parameterList[0];
+
+		parameterList.erase(parameterList.begin());
 	}
 }
 

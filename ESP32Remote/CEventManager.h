@@ -11,7 +11,6 @@ class CEventManager : public CBaseEventInterface
 		CEventManager();
 		virtual ~CEventManager();
 
-		//virtual void init();
 		void loop() override;
 
 		void addInstance(CBaseEventInterface * _instance);

@@ -13,8 +13,6 @@ CMainApplication::~CMainApplication()
 
 void CMainApplication::init()
 {
-	vector<String> signalNameList;
-
 	Serial.begin(56000);;
 
 	if (!SD.begin(22))
@@ -28,11 +26,10 @@ void CMainApplication::init()
 	if (!SD.exists("/root"))
 		SD.mkdir("/root");
 
-
-	getIRSignalNameList(&signalNameList);
-
-	lcdManager.init(&signalNameList);
+	lcdManager.init();
 	wifiManager.init();
+
+	updateLoadMenu();
 
 	addInstance(&lcdManager);
 	addInstance(&wifiManager);
@@ -44,12 +41,8 @@ void CMainApplication::init()
 	registerEvent("getBattCharge", static_cast<eventObject> (&CMainApplication::getBatteryChargeEvent));
 	registerEvent("getIRSignalNameList", static_cast<eventObject> (&CMainApplication::getIRSignalNameListEvent)); //not on lcd diplay (command lenght > 14)
 	registerEvent("removeIRSignal", static_cast<eventObject> (&CMainApplication::removeIRSignalEvent));
-
-	//printDirectory();
-
-	/*Serial.println(a.readStringUntil('\n'));
-
-	Serial.println(a.readStringUntil('\n'));*/
+	registerEvent("renameIRSignal", static_cast<eventObject> (&CMainApplication::renameIRSignalEvent));
+	registerEvent("deepSleep", static_cast<eventObject> (&CMainApplication::deepSleepEvent));
 
 	adc1_config_width(ADC_WIDTH_12Bit);
 	adc1_config_channel_atten(BATTERY_ADC_CHANNEL, ADC_ATTEN_11db);
@@ -60,31 +53,11 @@ void CMainApplication::init()
 
 		return;
 	}
-
-	/*Serial.printf("this: %p\n", (void *) this);
-	Serial.printf("irControl 1: %p\n", (void *)&irControl);
-	Serial.printf("irControl 2: %p\n", (void *) &this->CMainApplication::irControl);*/
 }
 
 void CMainApplication::loop()
 {
 	CEventManager::loop();
-
-	//irControl.getSignal(0);
-
-	//saveIRSignal("third", &irControl);
-	/*loadIRSignal("third", &irControl);
-
-	Serial.println("sending");
-
-	for (int i = 0; i < 5; i++)
-	{
-	irControl.sendSignal();
-
-	delay(2000);
-	}
-
-	delay(100);*/
 }
 
 IRStatus CMainApplication::saveIRSignal(String _name, CIRControl * _irControl, bool _bOverwrite)
@@ -226,6 +199,8 @@ int16_t CMainApplication::getBatteryCharge()
 
 String CMainApplication::saveIRSignalEvent(String _eventData)
 {
+	IRStatus returnValue;
+
 	bool bOverwite = false;
 
 	if (_eventData.substring(_eventData.indexOf(':') + 1) == "true")
@@ -233,8 +208,12 @@ String CMainApplication::saveIRSignalEvent(String _eventData)
 
 	PL("saveIR");
 
-	//return IRStatusToString(static_cast<CMainApplication *>(_basePointer)->saveIRSignal(_eventData.substring(0, _eventData.indexOf(':')), &irControl, bOverwite));
-	return IRStatusToString(saveIRSignal(_eventData.substring(0, _eventData.indexOf(':')), &irControl, bOverwite));
+	returnValue = saveIRSignal(_eventData.substring(0, _eventData.indexOf(':')), &irControl, bOverwite);
+
+	if (returnValue == IR_OK)
+		updateLoadMenu();
+
+	return IRStatusToString(returnValue);
 }
 
 String CMainApplication::loadIRSignalEvent(String _eventData)
@@ -291,7 +270,7 @@ String CMainApplication::getIRSignalNameListEvent(String _eventData)
 	for (int i = 0; i < signalList.size(); i++)
 		signalListString += String(signalList[i]) + ";";
 
-	return "IR_SIGNAL_NAME_LIST: " + signalListString;
+	return "IR_SIGNAL_NAME_LIST:" + signalListString;
 }
 
 String CMainApplication::removeIRSignalEvent(String _eventData)
@@ -300,7 +279,70 @@ String CMainApplication::removeIRSignalEvent(String _eventData)
 		return IRStatusToString(IR_NOT_FOUND);
 
 	if (SD.remove("/root/" + _eventData))
+	{
+		updateLoadMenu();
+
 		return IRStatusToString(IR_OK);
+	}
 	else
 		return IRStatusToString(IR_ERROR);
+}
+
+String CMainApplication::renameIRSignalEvent(String _eventData)
+{
+	if (!SD.exists("/root/" + _eventData.substring(0, _eventData.indexOf(':'))))
+		return IRStatusToString(IR_NOT_FOUND);
+
+	if (SD.exists("/root/" + _eventData.substring(_eventData.indexOf(':') + 1)))
+		return IRStatusToString(IR_ALREADY_EXISTS);
+
+	if (SD.rename("/root/" + _eventData.substring(0, _eventData.indexOf(':')), "/root/" + _eventData.substring(_eventData.indexOf(':') + 1)))
+	{
+		updateLoadMenu();
+
+		return IRStatusToString(IR_OK);
+	}
+	else
+		return IRStatusToString(IR_ERROR);
+}
+
+String CMainApplication::deepSleep(uint64_t _time, bool _bSeconds)
+{
+	if (esp_deep_sleep_enable_timer_wakeup(_time) == ESP_OK)
+	{
+		lcdManager.clear();
+
+		CLcdMenuInterface::printCenteredString("sleeping for", false, 0, 15, &lcdManager);
+
+		if (_bSeconds)
+			CLcdMenuInterface::printCenteredString(String((uint32_t)_time / (1000 * 1000)) + " s", false, 1, 15, &lcdManager);
+		else
+			CLcdMenuInterface::printCenteredString(String((uint32_t)_time / 1000) +  "ms", false, 1, 15, &lcdManager);
+
+		esp_deep_sleep_start();
+	}
+
+	return IRStatusToString(IR_ERROR);
+}
+
+String CMainApplication::deepSleepEvent(String _eventData)
+{
+	if (_eventData.indexOf(':') != -1)
+	{
+		if (_eventData.indexOf("true") != -1)
+			return deepSleep(_eventData.substring(_eventData.indexOf(':') + 1).toInt() * 1000 * 1000, true);
+
+		return deepSleep(_eventData.substring(_eventData.indexOf(':') + 1).toInt() * 1000, false);
+	}
+
+	return deepSleep(_eventData.toInt() * 1000, false);
+}
+
+void CMainApplication::updateLoadMenu()
+{
+	vector<String> signalNameList;
+
+	getIRSignalNameList(&signalNameList);
+
+	lcdManager.updateLoadMenu(&signalNameList);
 }

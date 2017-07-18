@@ -10,25 +10,25 @@
 
 #define LCD_INTERFACE_ACTIVATE_PIN GPIO_NUM_36
 
-class CLcdManager : public CBaseEventInterface, public CButtonManager
+class CLcdManager : public CBaseEventInterface, public CButtonManager, public LiquidCrystal
 {
 	public:
 		CLcdManager(CBaseEventInterface * _basePointer);
 		~CLcdManager();
 
-		void init(std::vector<String> * _signalNameList);
+		void init();
 		void loop() override;
 
-	private:
-		LiquidCrystal lcd;
+		void updateLoadMenu(std::vector<String> * _signalNameList);
 
-		CLcdMenu lcdMainMenu;
+	private:
+
+		CLcdMenu  lcdMainMenu,
+				 *loadIRSignalMenu;
 
 		bool bILcdnitialized;
 
 		String lcdFunctionEvent(String _data);
-
-		//eventObject lcdFunctionEventObject;
 
 		void upButtonEventHandler(ButtonActions _buttonAction);
 		void downButtonEventHandler(ButtonActions _buttonAction);
